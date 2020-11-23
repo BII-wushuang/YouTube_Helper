@@ -53,9 +53,7 @@ class SearchTab(QWidget):
         html = ''
         self.main_window.tab_manager.setCurrentIndex(2)
         for query in queries:
-            maxResults = self.main_window.maxResults.value()
-            order = self.order_dict[self.main_window.order.currentText()]
-            html += self.main_window.API.searchResults(query=query, maxResults=maxResults, order=order)
+            html += self.main_window.API.searchResults(query=query)
 
         self.show_html(html)
         self.main_window.tab_manager.setCurrentIndex(0)
