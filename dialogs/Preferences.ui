@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PreferencesDialog</class>
+ <widget class="QDialog" name="PreferencesDialog">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>760</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>760</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>800</width>
+    <height>760</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <family>Arial</family>
+    <pointsize>9</pointsize>
+   </font>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::DefaultContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>Preferences</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../assets/Ico.ico</normaloff>../assets/Ico.ico</iconset>
+  </property>
+  <property name="whatsThis">
+   <string/>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="sizeConstraint">
+    <enum>QLayout::SetNoConstraint</enum>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>800</width>
+       <height>760</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <widget class="QLabel" name="directoryLabel">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>200</y>
+        <width>130</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Download Directory</string>
+      </property>
+     </widget>
+     <widget class="QPlainTextEdit" name="directory">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>200</y>
+        <width>360</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Default Download Directory&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="plainText">
+       <string>./</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="directoryBtn">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>200</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Browse Directory</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="outputLabel">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>280</y>
+        <width>130</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Output Template</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="exitBtn">
+      <property name="geometry">
+       <rect>
+        <x>560</x>
+        <y>680</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Exit without Saving</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="resetSettingsBtn">
+      <property name="geometry">
+       <rect>
+        <x>320</x>
+        <y>680</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Reset to Defaults</string>
+      </property>
+     </widget>
+     <widget class="QGroupBox" name="groupBox">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>440</y>
+        <width>720</width>
+        <height>200</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Post Processor Options</string>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+      <widget class="QCheckBox" name="convertFormats">
+       <property name="geometry">
+        <rect>
+         <x>420</x>
+         <y>120</y>
+         <width>240</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Convert Downloaded Videos to Preferred Format&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Convert to Preferred Formats</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="keepFiles">
+       <property name="geometry">
+        <rect>
+         <x>420</x>
+         <y>40</y>
+         <width>240</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Keep Constituent Files after Merging&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Keep Files After Merging</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="preferredVideos">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>40</y>
+         <width>100</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Preferred Format for Merging and Conversion&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>mp4</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>mkv</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>avi</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>gif</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>3gp</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>webm</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QComboBox" name="preferredAudios">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>120</y>
+         <width>100</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Preferred Format for Merging and Conversion&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>mp3</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>m4a</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>aac</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>ogg</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>flac</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>webm</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="videoLabel">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>40</y>
+         <width>160</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Preferred Video Format</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="audioLabel">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>120</y>
+         <width>160</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Preferred Audio Format</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QLabel" name="proxyLabel">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>40</y>
+        <width>130</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Proxy</string>
+      </property>
+     </widget>
+     <widget class="QPlainTextEdit" name="proxy">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>40</y>
+        <width>360</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt; HTTP/HTTPS/SOCKS proxy, eg. &lt;span style=&quot; font-family:'Arial,Helvetica Neue,Helvetica,sans-serif'; font-size:15px; color:#242729; background-color:#ffffff;&quot;&gt;socks5://127.0.0.1:1080/&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="overwrite">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>280</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Overwrite Similar Filenames&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Overwrite Files</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="writesubtitles">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>360</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Download Subtitles</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="saveSettingsBtn">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>680</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Save Settings</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="searchAppendLabel">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>120</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string># Searches to Append</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="proxyChecked">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>40</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Use Proxy</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="searchAppend">
+      <property name="geometry">
+       <rect>
+        <x>260</x>
+        <y>120</y>
+        <width>60</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Number of Search Results to Append to Download List&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="maximum">
+       <number>50</number>
+      </property>
+      <property name="value">
+       <number>1</number>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="output">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>280</y>
+        <width>360</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output Filename Templates&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="editable">
+       <bool>true</bool>
+      </property>
+      <property name="maxVisibleItems">
+       <number>6</number>
+      </property>
+      <property name="frame">
+       <bool>true</bool>
+      </property>
+      <item>
+       <property name="text">
+        <string>%(title)s.%(ext)s</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>%(id)s.%(ext)s</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>%(title)s - %(format_id)s.%(ext)s</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>%(playlist)s/%(playlist_index)s - %(title)s.%(ext)s</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>%(uploader)s/%(playlist)s/%(playlist_index)s - %(title)s.%(ext)s</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>%(uploader)s/%(title)s.%(ext)s</string>
+       </property>
+      </item>
+     </widget>
+     <widget class="QCheckBox" name="saveSearchSettings">
+      <property name="geometry">
+       <rect>
+        <x>520</x>
+        <y>120</y>
+        <width>180</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save the Search Settings (Maximum Search Results / Default Ordering)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="text">
+       <string>Save Search Settings</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="writeautomaticsub">
+      <property name="geometry">
+       <rect>
+        <x>280</x>
+        <y>360</y>
+        <width>260</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Automatically Generated Subtitles</string>
+      </property>
+     </widget>
+     <widget class="QPlainTextEdit" name="subtitleslangs">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>360</y>
+        <width>160</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Subtitle Languages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="plainText">
+       <string>en zh fr</string>
+      </property>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>saveSettingsBtn</tabstop>
+  <tabstop>exitBtn</tabstop>
+  <tabstop>resetSettingsBtn</tabstop>
+  <tabstop>proxy</tabstop>
+  <tabstop>proxyChecked</tabstop>
+  <tabstop>searchAppend</tabstop>
+  <tabstop>saveSearchSettings</tabstop>
+  <tabstop>directory</tabstop>
+  <tabstop>directoryBtn</tabstop>
+  <tabstop>output</tabstop>
+  <tabstop>overwrite</tabstop>
+  <tabstop>writesubtitles</tabstop>
+  <tabstop>preferredVideos</tabstop>
+  <tabstop>preferredAudios</tabstop>
+  <tabstop>keepFiles</tabstop>
+  <tabstop>convertFormats</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

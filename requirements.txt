@@ -1,0 +1,5 @@
+PyQt5
+PyQtWebEngine
+google_api_python_client==1.8.0
+google-auth-oauthlib
+git+https://github.com/ytdl-org/youtube-dl@refs/pull/30184/merge
