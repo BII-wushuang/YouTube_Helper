@@ -47,7 +47,7 @@ class YouTubeHelper(QMainWindow):
         if self.API.API_type == 'None':
             self.sig_error.emit('Failed to create service instance with OAuth credentials or API Key.\nSearch results will be limited to one.')
         elif self.API.API_type == 'APIkey':
-            self.main_window.sig_error.emit('Failed to service instance with OAuth credentials.\nAccess to user channel disabled.')
+            self.sig_error.emit('Failed to service instance with OAuth credentials.\nAccess to user channel disabled.')
 
     def init_API(self):
         self.API = API(self)
