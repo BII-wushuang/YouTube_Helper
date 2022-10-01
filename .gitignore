@@ -136,3 +136,4 @@ dmypy.json
 api_key.txt
 client.json
 token_youtube_v3.pickle
+.DS_Store

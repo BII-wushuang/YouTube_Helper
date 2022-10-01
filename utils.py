@@ -491,7 +491,6 @@ class AllVideos(QTreeView):
         for i in range(childCount):
             children.append(entry.child(i, 0))
             self.getChildren(children, entry.child(i, 0))
-
     
 
 
