@@ -1,4 +1,26 @@
 from utils import *
+from youtube_dl.postprocessor.common import PostProcessor
+from youtube_dl.utils import encodeArgument, PostProcessingError
+import subprocess
+import os
+from shutil import move
+
+
+class AudioPP(PostProcessor):
+    def run(self, information):
+        directory, filename = os.path.split(information['filepath'])
+        if directory == '':
+            directory = os.getcwd()
+        outfile = os.path.join(directory, filename)
+        print(outfile)
+        tempfile = os.path.join(os.getcwd(), 'temp.mp3')
+        command = f'ffmpeg -i "{outfile}" -acodec copy {tempfile} -y'
+        retCode = subprocess.call(encodeArgument(command), shell=True)
+        if retCode != 0:
+            raise PostProcessingError(
+                'Command returned error code %d' % retCode)
+        move(tempfile, outfile)
+        return [], information
 
 
 class MyLogger(object):
@@ -109,6 +131,7 @@ class DownloadManager(QObject):
             self.ydl.append(downloader)
 
         if selection == 'Audio Only':
+            self.ydl_audio.add_post_processor(AudioPP(None))
             self.ydl.append(self.ydl_audio)
 
     def download(self, downloader, link):
