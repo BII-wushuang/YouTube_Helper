@@ -46,7 +46,7 @@ convertFormats=2
 
         for k in self.parent().settings.allKeys():
             val = self.parent().settings.value(k)
-            if k == 'maxResults' or k == 'order':
+            if k in ('maxResults', 'order', 'cookiesBrowser'):
                 continue
             elif eval('self.' + k + '.__class__') == QCheckBox:
                 val = int(val)
@@ -69,7 +69,7 @@ convertFormats=2
     def saveSettings(self):
         for k in self.parent().settings.allKeys():
             val = None
-            if k == 'maxResults' or k == 'order':
+            if k in ('maxResults', 'order', 'cookiesBrowser'):
                 continue
             elif eval('self.' + k + '.__class__') == QCheckBox:
                 val = eval('self.' + k + '.checkState()')

@@ -1,3 +1,5 @@
+import traceback
+
 from utils import *
 
 
@@ -29,16 +31,22 @@ class SearchTab(QWidget):
         self.main_window.tab_manager.setCurrentIndex(2)
         type_id = self.main_window.search_types.checkedId()
 
-        if type_id == 0:
-            html = self.main_window.API.searchResults(query=query)
+        html = ''
+        try:
+            if type_id == 0:
+                html = self.main_window.API.searchResults(query=query)
+            elif type_id == 1:
+                html = self.main_window.API.channelLists(channelId=query)
+            elif type_id == 2:
+                html = self.main_window.API.playLists(playlistId=query)
+            else:
+                html = '<h1>Pick General / Channel / Playlist first</h1>'
+        except Exception:
+            tb = traceback.format_exc()
+            print(tb, file=sys.stderr)
+            self.main_window.sig_error.emit('Search failed:\n' + tb)
 
-        elif type_id == 1:
-            html = self.main_window.API.channelLists(channelId=query)
-
-        elif type_id == 2:
-            html = self.main_window.API.playLists(playlistId=query)
-
-        self.show_html(html)
+        self.show_html(html or '<h1>No results</h1>')
         self.main_window.tab_manager.setCurrentIndex(0)
 
     def load_list(self):

@@ -1,5 +1,5 @@
-from youtube_dl import YoutubeDL
-from youtube_dl.utils import format_bytes
+from yt_dlp import YoutubeDL
+from yt_dlp.utils import format_bytes
 from PyQt5.Qt import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -15,23 +15,27 @@ from urllib.parse import urlparse
 
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from google.auth.transport.requests import Request
 
 
 class YDL(YoutubeDL):
-    def list_formats(self, info_dict):
+    # NOTE: do not name these to shadow YoutubeDL's own methods (list_formats,
+    # format_resolution, _format_note). yt-dlp calls those internally with
+    # signatures of its own (e.g. format_resolution(fmt, default=None)).
+    def split_formats(self, info_dict):
         formats = info_dict.get('formats', [info_dict])
         videos = []
         audios = []
         for f in formats:
             if f.get('vcodec') == 'none':
-                audios.append([f['format_id'], self.format_resolution(f), self.file_size(f), f['ext'], self._format_note(f)])
+                audios.append([f['format_id'], self._resolution(f), self._file_size(f), f['ext'], self._note(f)])
             else:
-                videos.append([f['format_id'], self.format_resolution(f), self.file_size(f), f['ext'], self._format_note(f)])
+                videos.append([f['format_id'], self._resolution(f), self._file_size(f), f['ext'], self._note(f)])
         return videos, audios
 
-    def _format_note(self, fdict):
+    def _note(self, fdict):
         res = ''
         if fdict.get('ext') in ['f4f', 'f4m']:
             res += '(unsupported) '
@@ -71,7 +75,7 @@ class YDL(YoutubeDL):
             res += ' (%5dHz)' % fdict['asr']
         return res
 
-    def file_size(self, fdict):
+    def _file_size(self, fdict):
         res = ''
         if fdict.get('filesize') is not None:
             res += format_bytes(fdict['filesize'])
@@ -80,7 +84,7 @@ class YDL(YoutubeDL):
         return res
 
     @staticmethod
-    def format_resolution(format):
+    def _resolution(format):
         if format.get('vcodec') == 'none':
             return 'audio only'
         if format.get('height') is not None:
@@ -117,10 +121,26 @@ class API(object):
             'ignoreerrors': True,
             'default_search': 'auto',
             'logger': self.logger,
+            'noprogress': True,
+            'quiet': True,
         }
         if int(self.main_window.settings.value('proxyChecked')) == 2:
             ydl_opts['proxy'] = self.main_window.settings.value('proxy')
+
+        # Optional: authenticate scraping with a local browser's YouTube cookies.
+        # Set 'cookiesBrowser' in settings.ini to chrome/edge/firefox/
+        # brave/chromium/vivaldi/opera to force one; otherwise it is auto-tried
+        # only when a search returns nothing.
+        self.cookies_browser = (self.main_window.settings.value('cookiesBrowser') or '').strip().lower() or None
+        if self.cookies_browser:
+            ydl_opts['cookiesfrombrowser'] = (self.cookies_browser,)
+
         self.ydl = YDL(ydl_opts)
+        # Flat variant for enumerating channels / playlists: lists video URLs
+        # and titles WITHOUT extracting every video (which is minutes-slow and
+        # looks like an empty/hung result for a big channel).
+        self.ydl_flat = YDL({**ydl_opts, 'extract_flat': 'in_playlist',
+                             'playlistend': 200})
 
         self.Create_Service()
 
@@ -165,17 +185,22 @@ class API(object):
                 return
 
     def importlink(self, link):
+        link = link.strip()
         html = ''
-        if 'www.youtube.com/c' in link or 'www.youtube.com/user/' in link:
-            html = self.channelLists(link)
-        elif 'www.youtube.com/' in link and 'list=' in link:
+        if 'list=' in link and 'watch?v=' not in link:
             html = self.playLists(link)
-        elif link not in self.main_window.downloadVideos.videos:
+        elif any(s in link for s in ('/channel/', '/c/', '/user/', '/@')):
+            html = self.channelLists(link)
+        elif link and link not in self.main_window.downloadVideos.videos:
             info = self.ydl.extract_info(link, download=False)
             if not info:
+                self.main_window.sig_error.emit('Could not read: {}'.format(link))
                 return
-            html = self.renderResults([info], info.get('title'), 3)
-        self.main_window.search_tab.show_html(html)
+            if info.get('entries') is not None:            # playlist/channel-like
+                html = self.renderResults(info.get('entries') or [], info.get('title'), 3)
+            else:
+                html = self.renderResults([info], info.get('title'), 3)
+        self.main_window.search_tab.show_html(html or '<h1>Nothing to import</h1>')
 
     def searchResults(self, query, maxResults=5, order='relevance'):
         """
@@ -188,116 +213,222 @@ class API(object):
         maxResults = self.main_window.maxResults.value()
         order = self.order_dict[self.main_window.order.currentText()]
         if self.API_type != 'None':
-            search_results = self.youtube.search().list(q=query, part='id', maxResults=maxResults, order=order, type='video').execute()['items']
+            try:
+                results = self.youtube.search().list(
+                    q=query, part='snippet', maxResults=maxResults,
+                    order=order, type='video').execute().get('items', [])
+            except HttpError as e:
+                self.main_window.sig_error.emit(
+                    'YouTube search failed ({}). The Data API daily quota may be '
+                    'exhausted - try again later, or delete api_key.txt / the OAuth '
+                    'token to fall back to yt-dlp scraping.'.format(e))
+                return self.renderResults([], query, 0)
+
+            ids = [r['id']['videoId'] for r in results if r.get('id', {}).get('videoId')]
+            stats = {}
+            if ids:
+                try:
+                    for v in self.youtube.videos().list(
+                            part='statistics', id=','.join(ids)).execute().get('items', []):
+                        stats[v['id']] = v.get('statistics', {})
+                except HttpError:
+                    pass
 
             entries = []
-            for result in search_results:
-                id = result['id']['videoId']
-                entries.append(self.prepareAPIentry(id))
+            for r in results:
+                vid = r.get('id', {}).get('videoId')
+                if not vid:
+                    continue
+                sn = r.get('snippet', {})
+                st = stats.get(vid, {})
+                thumbs = sn.get('thumbnails', {})
+                thumb = (thumbs.get('high') or thumbs.get('medium')
+                         or thumbs.get('default') or {}).get('url', '')
+                entries.append({
+                    'id': vid,
+                    'webpage_url': 'https://www.youtube.com/watch?v=' + vid,
+                    'title': sn.get('title', vid),
+                    'thumbnail': thumb,
+                    'view_count': st.get('viewCount', 'N/A'),
+                    'like_count': st.get('likeCount', 'N/A'),
+                })
         else:
-            entries = self.ydl.extract_info(query, download=False)['entries']
-        html = self.renderResults(entries, query, 0)
+            info = self.ydl.extract_info(query, download=False)
+            entries = (info or {}).get('entries') or []
 
-        return html
+        # The Data API (and unauthenticated scraping) filter results that
+        # youtube.com shows to a signed-in account with SafeSearch off. If we
+        # got nothing, retry the search authenticated with the browser's cookies.
+        if not any(entries):
+            cookie_entries = self.cookieSearch(query, maxResults)
+            if cookie_entries:
+                entries = cookie_entries
+
+        return self.renderResults(entries, query, 0)
+
+    def cookieSearch(self, query, n):
+        """yt-dlp search authenticated with a local browser's YouTube cookies,
+        so results match what that signed-in browser shows (SafeSearch honours
+        the account setting). Returns [] if no usable browser cookies are found.
+        """
+        browsers = [self.cookies_browser] if self.cookies_browser else \
+            ['edge', 'chrome', 'firefox', 'chromium', 'safari', 'opera', 'brave', 'vivaldi']
+        for br in browsers:
+            if not br:
+                continue
+            try:
+                opts = {'quiet': True, 'noprogress': True, 'ignoreerrors': True,
+                        'extract_flat': 'in_playlist', 'cookiesfrombrowser': (br,)}
+                with YoutubeDL(opts) as y:
+                    info = y.extract_info('ytsearch%d:%s' % (n, query), download=False) or {}
+                entries = [e for e in (info.get('entries') or []) if e]
+                if entries:
+                    self.cookies_browser = br    # remember what worked this session
+                    return entries
+            except Exception as e:
+                print('cookieSearch({}): {}'.format(br, e), file=sys.stderr)
+        return []
 
     def channelLists(self, channelId):
         """
         Args:
-        - channelId: the id of the channel
+        - channelId: a channel URL, an @handle, a UC... id, or a channel name.
         """
-        if channelId.find('https://www.youtube.com/channel/') == -1:
-            channelId = 'https://www.youtube.com/channel/' + channelId
-        channel_info = self.ydl.extract_info(channelId, download=False)
-        entries = channel_info['entries']
-        html = self.renderResults(entries, channel_info['title'], 1)
+        channelId = channelId.strip()
+        if channelId.startswith('http'):
+            url = channelId
+        elif channelId.startswith('@'):
+            url = 'https://www.youtube.com/' + channelId
+        elif channelId.startswith('UC') and len(channelId) == 24:
+            url = 'https://www.youtube.com/channel/' + channelId
+        else:
+            # treat it as a name/handle - let YouTube resolve it
+            url = 'https://www.youtube.com/@' + channelId.lstrip('@')
 
-        return html
+        channel_info = self.ydl_flat.extract_info(url, download=False) or {}
+        entries = channel_info.get('entries') or []
+        # a channel page can nest tabs (Videos / Shorts / Live) as sub-playlists
+        if entries and isinstance(entries[0], dict) and entries[0].get('entries') is not None:
+            flat = []
+            for tab in entries:
+                flat.extend((tab or {}).get('entries') or [])
+            entries = flat
+        return self.renderResults(entries, channel_info.get('title', channelId), 1)
 
     def playLists(self, playlistId):
         """
         Args:
         - playlistId: the id of the playlist
         """
-        if playlistId.find('list=')>0:
-            playlistId = playlistId[playlistId.find('list=')+5:]
+        playlistId = playlistId.strip()
+        if 'list=' in playlistId:
+            playlistId = playlistId.split('list=', 1)[1].split('&', 1)[0]
 
         if self.API_type != 'None':
-            response = self.youtube.playlists().list(part='snippet', id=playlistId).execute()
-            title = response['items'][0]['snippet']['title']
+            try:
+                meta = self.youtube.playlists().list(
+                    part='snippet', id=playlistId).execute().get('items', [])
+                title = meta[0]['snippet']['title'] if meta else playlistId
 
-            entries = []
-            response = self.youtube.playlistItems().list(
-                part='contentDetails',
-                playlistId=playlistId,
-                maxResults=50
-            ).execute()
-            for item in response['items']:
-                id = item['contentDetails']['videoId']
-                entries.append(self.prepareAPIentry(id))
-
-            nextPageToken = response.get('nextPageToken')
-            while nextPageToken:
-                response = self.youtube.playlistItems().list(
-                    part='contentDetails',
-                    playlistId=playlistId,
-                    maxResults=50,
-                    pageToken=nextPageToken
-                ).execute()
-
-                for item in response['items']:
-                    id = item['contentDetails']['videoId']
-                    entries.append(self.prepareAPIentry(id))
-
-                nextPageToken = response.get('nextPageToken')
-
+                entries = []
+                pageToken = None
+                while True:
+                    response = self.youtube.playlistItems().list(
+                        part='snippet', playlistId=playlistId,
+                        maxResults=50, pageToken=pageToken).execute()
+                    for item in response.get('items', []):
+                        sn = item.get('snippet', {})
+                        vid = sn.get('resourceId', {}).get('videoId')
+                        if not vid:
+                            continue
+                        thumbs = sn.get('thumbnails', {})
+                        thumb = (thumbs.get('high') or thumbs.get('medium')
+                                 or thumbs.get('default') or {}).get('url', '')
+                        entries.append({
+                            'id': vid,
+                            'webpage_url': 'https://www.youtube.com/watch?v=' + vid,
+                            'title': sn.get('title', vid),
+                            'thumbnail': thumb,
+                            'view_count': 'N/A', 'like_count': 'N/A',
+                        })
+                    pageToken = response.get('nextPageToken')
+                    if not pageToken:
+                        break
+            except HttpError as e:
+                self.main_window.sig_error.emit('Playlist lookup failed: {}'.format(e))
+                return self.renderResults([], playlistId, 2)
         else:
-            playlist_info = self.ydl.extract_info(playlistId, download=False)
-            title = playlist_info['title']
-            entries = playlist_info['entries']
+            if not playlistId.startswith('http'):
+                playlistId = 'https://www.youtube.com/playlist?list=' + playlistId
+            playlist_info = self.ydl_flat.extract_info(playlistId, download=False) or {}
+            title = playlist_info.get('title', playlistId)
+            entries = playlist_info.get('entries') or []
 
         html = self.renderResults(entries, title, 2)
 
         return html
 
     def prepareAPIentry(self, id):
-        url = 'https://www.youtube.com/watch?v=' + id
-        snippet = self.youtube.videos().list(part='snippet', id=id).execute()['items'][0]['snippet']
-        statistics = self.youtube.videos().list(part='statistics', id=id).execute()['items'][0]['statistics']
-        entry = {'id': id,
-                 'webpage_url': url,
-                 'title': snippet['title'],
-                 'thumbnail': snippet['thumbnails']['high']['url'],
-                 'view_count': statistics['viewCount'],
-                 'like_count': statistics['likeCount']}
-        return entry
+        try:
+            item = self.youtube.videos().list(
+                part='snippet,statistics', id=id).execute()['items'][0]
+        except (HttpError, IndexError, KeyError):
+            return None
+        snippet = item.get('snippet', {})
+        statistics = item.get('statistics', {})
+        thumbs = snippet.get('thumbnails', {})
+        thumb = (thumbs.get('high') or thumbs.get('medium')
+                 or thumbs.get('default') or {}).get('url', '')
+        return {'id': id,
+                'webpage_url': 'https://www.youtube.com/watch?v=' + id,
+                'title': snippet.get('title', id),
+                'thumbnail': thumb,
+                'view_count': statistics.get('viewCount', 'N/A'),
+                'like_count': statistics.get('likeCount', 'N/A')}
 
     def renderResults(self, entries, heading, type_id):
         """
         Args:
-        - entries: the extracted info returned by youtube-dl.
+        - entries: the extracted info returned by yt-dlp.
 
         Parses the extracted information into desired format.
         """
 
         html = '<h1>' + str(heading) + '</h1>'
 
+        entries = list(entries or [])
+        if not any(entries):
+            return html + ("<p>No results found. YouTube itself returns nothing "
+                           "for this exact query - try adding another word, or a "
+                           "romanised / kana spelling.</p>")
+
+        parent = self.main_window.allVideos.model().item(type_id)
         heading_item = StandardItem(heading, set_bold=True)
-        self.main_window.allVideos.model().item(type_id).appendRow(heading_item)
-        idx = self.main_window.allVideos.model().item(type_id).rowCount() - 1
-        node = self.main_window.allVideos.model().item(type_id).child(idx)
+        parent.appendRow(heading_item)
+        node = parent.child(parent.rowCount() - 1)
 
-        for (i, info) in enumerate(entries):
-            if info is None:
+        try:
+            searchAppend = int(self.main_window.settings.value('searchAppend'))
+        except (TypeError, ValueError):
+            searchAppend = 1
+
+        for (i, info) in enumerate(entries or []):
+            if not info:
                 continue
-            link = info['webpage_url']
+            link = info.get('webpage_url') or info.get('url')
+            if not link:
+                continue
 
-            entry = """<figure><a href='{}' target='_blank'><figcaption>{}</figcaption><img src='{}' title='{}'/></a><figcaption>views: {}, likes: {}</figcaption></figure>""".format(link, info.get('title'), info.get('thumbnail'), link, info.get('view_count'), info.get('like_count'))
+            entry = """<figure><a href='{}' target='_blank'><figcaption>{}</figcaption><img src='{}' title='{}'/></a><figcaption>views: {}, likes: {}</figcaption></figure>""".format(
+                link, info.get('title', ''), info.get('thumbnail', ''), link,
+                info.get('view_count', 'N/A'), info.get('like_count', 'N/A'))
 
             info['thumbnail_entry'] = entry
-            if type_id > 0 or i < int(self.main_window.settings.value('searchAppend')):
-                self.main_window.allVideos.importvideo(link, node, info, append=True)
-            else:
-                self.main_window.allVideos.importvideo(link, node, info, append=False)
+            try:
+                append = type_id > 0 or i < searchAppend
+                self.main_window.allVideos.importvideo(link, node, info, append=append)
+            except Exception as e:
+                print('renderResults: importvideo failed for {}: {}'.format(link, e), file=sys.stderr)
 
             html += entry
 

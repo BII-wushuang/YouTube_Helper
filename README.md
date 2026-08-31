@@ -1,11 +1,11 @@
 # YouTube Helper
 
-A GUI wrapper for [YouTube-dl](https://github.com/ytdl-org/youtube-dl).
+A GUI wrapper for [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
 ### Functionalities:
 - Perform YouTube searches
 - Drag and Drop or Paste (Ctrl+V) into the GUI to import links
-- Supported site links follow that of [YouTube-dl](https://ytdl-org.github.io/youtube-dl/supportedsites.html)
+- Supported site links follow that of [yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 - Select streams for downloading
 - Import videos into playlists / create playlists (requires [Google OAuth 2.0](#google-oauth))
 

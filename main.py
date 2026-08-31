@@ -109,6 +109,10 @@ class YouTubeHelper(QMainWindow):
 
 def launch_app():
     import sys
+    # QtWebEngine requires a shared GL context set BEFORE the QApplication is
+    # built; without it the embedded web views render blank intermittently
+    # (search results, video preview, thumbnails showing nothing / "null").
+    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     yt = YouTubeHelper()
     sys.exit(app.exec_())
@@ -119,9 +123,13 @@ if __name__ == '__main__':
 
     sys._excepthook = sys.excepthook
 
-    def exception_hook(exctype, value, traceback):
-        print(exctype, value, traceback)
-        sys.excepthook(exctype, value, traceback)
+    def exception_hook(exctype, value, tb):
+        # Call the ORIGINAL hook, not sys.excepthook (which is now this
+        # function) - otherwise every exception, including the Ctrl-C on
+        # exit, recurses until RecursionError.
+        sys._excepthook(exctype, value, tb)
+        if issubclass(exctype, KeyboardInterrupt):
+            return
         sys.exit(1)
 
     sys.excepthook = exception_hook
