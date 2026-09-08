@@ -109,11 +109,15 @@ class YouTubeHelper(QMainWindow):
 
 def launch_app():
     import sys
-    # QtWebEngine requires a shared GL context set BEFORE the QApplication is
-    # built; without it the embedded web views render blank intermittently
-    # (search results, video preview, thumbnails showing nothing / "null").
-    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+    # These attributes must be set BEFORE the QApplication is constructed.
+    # AA_ShareOpenGLContexts: QtWebEngine needs it or the embedded web views
+    #   render blank intermittently (search results / preview / thumbnails).
+    # AA_EnableHighDpiScaling / UseHighDpiPixmaps: crisp rendering on HiDPI.
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
     app = QApplication(sys.argv)
+    apply_theme(app)          # light palette + font scaled to this screen
     yt = YouTubeHelper()
     sys.exit(app.exec_())
 

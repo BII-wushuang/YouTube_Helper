@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineSettings
-from PyQt5.uic import loadUi
+from PyQt5.uic import loadUi as _loadUi
 
 
 import pickle
@@ -18,6 +18,135 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from google.auth.transport.requests import Request
+
+
+# ---------------------------------------------------------------------------
+# Adaptive UI scaling + forced light theme.
+#
+# The .ui files were authored on Windows with 9/10 pt Arial and hard-coded
+# pixel geometry. Elsewhere - especially macOS, where Qt uses 72 logical DPI
+# instead of 96 - that renders ~25-40 % too small, and the hard-coded black
+# item colours vanish against a dark system theme. These helpers rescale every
+# widget's font (and fixed-size dialogs' geometry) to the running screen, and
+# pin a light Fusion palette so the colours are always right.
+# ---------------------------------------------------------------------------
+
+_UI_SCALE = None
+_UI_FONT_FAMILIES = {'arial'}          # families that came from the .ui files
+_REF_HEIGHT = 912.0                    # usable screen height the .ui was tuned for
+_QWIDGETSIZE_MAX = 16777215
+
+
+def ui_scale():
+    """A factor >= 1.0 for the primary screen: DPI parity (96 vs 72) times a
+    gentle resolution term. Computed once, then cached. Override with the
+    YTH_UI_SCALE environment variable (e.g. YTH_UI_SCALE=1.6)."""
+    global _UI_SCALE
+    if _UI_SCALE is None:
+        override = os.environ.get('YTH_UI_SCALE', '').strip()
+        if override:
+            try:
+                _UI_SCALE = max(0.5, min(float(override), 3.0))
+                return _UI_SCALE
+            except ValueError:
+                pass
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return 1.0
+        dpi_factor = 96.0 / max(screen.logicalDotsPerInch(), 48.0)
+        res_factor = screen.availableGeometry().height() / _REF_HEIGHT
+        _UI_SCALE = round(min(max(dpi_factor * res_factor, 1.0), 2.0), 3)
+    return _UI_SCALE
+
+
+def _sc(px):
+    return int(round(px * ui_scale()))
+
+
+def light_palette():
+    p = QPalette()
+    p.setColor(QPalette.Window, QColor(0xF2, 0xF2, 0xF2))
+    p.setColor(QPalette.WindowText, QColor(0x1A, 0x1A, 0x1A))
+    p.setColor(QPalette.Base, QColor(0xFF, 0xFF, 0xFF))
+    p.setColor(QPalette.AlternateBase, QColor(0xEA, 0xEA, 0xEA))
+    p.setColor(QPalette.ToolTipBase, QColor(0xFF, 0xFF, 0xE1))
+    p.setColor(QPalette.ToolTipText, QColor(0x1A, 0x1A, 0x1A))
+    p.setColor(QPalette.Text, QColor(0x1A, 0x1A, 0x1A))
+    p.setColor(QPalette.Button, QColor(0xF2, 0xF2, 0xF2))
+    p.setColor(QPalette.ButtonText, QColor(0x1A, 0x1A, 0x1A))
+    p.setColor(QPalette.BrightText, QColor(0xC4, 0x00, 0x00))
+    p.setColor(QPalette.Link, QColor(0x24, 0x5E, 0xDC))
+    p.setColor(QPalette.Highlight, QColor(0x30, 0x8C, 0xC6))
+    p.setColor(QPalette.HighlightedText, QColor(0xFF, 0xFF, 0xFF))
+    for role in (QPalette.WindowText, QPalette.Text, QPalette.ButtonText):
+        p.setColor(QPalette.Disabled, role, QColor(0x9A, 0x9A, 0x9A))
+    return p
+
+
+def apply_theme(app):
+    """Force a light Fusion look (independent of the OS dark/light setting) and
+    set a resolution-scaled base font for everything not styled by the .ui."""
+    app.setStyle('Fusion')
+    app.setPalette(light_palette())
+
+    base = QFont(app.font())
+    base.setPointSizeF(round(9.5 * ui_scale(), 1))
+    app.setFont(base)
+
+    app.setStyleSheet(
+        'QToolTip{color:#1a1a1a;background:#ffffe1;border:1px solid #b0b0b0;}'
+        'QTreeView,QListView,QTreeWidget,QTextBrowser{background:#ffffff;color:#1a1a1a;}'
+    )
+
+
+def scale_fonts(root):
+    """Multiply the point size of every descendant widget that carries a font
+    from the .ui files (family Arial) by the UI scale factor."""
+    factor = ui_scale()
+    if factor <= 1.001 or root is None:
+        return
+    for w in [root] + root.findChildren(QWidget):
+        f = w.font()
+        if f.family().lower() in _UI_FONT_FAMILIES and f.pointSizeF() > 0:
+            g = QFont(f)
+            g.setPointSizeF(f.pointSizeF() * factor)
+            w.setFont(g)
+
+
+def scale_geometry(win):
+    """Grow a fixed-size, absolutely-positioned dialog (and its non-layout
+    children) by the UI scale factor so the bigger fonts still fit."""
+    factor = ui_scale()
+    if factor <= 1.001 or win is None:
+        return
+    for w in [win] + win.findChildren(QWidget):
+        mn = w.minimumSize()
+        if mn.width() or mn.height():
+            w.setMinimumSize(_sc(mn.width()) if mn.width() else 0,
+                             _sc(mn.height()) if mn.height() else 0)
+        mx = w.maximumSize()
+        if mx.width() < _QWIDGETSIZE_MAX or mx.height() < _QWIDGETSIZE_MAX:
+            w.setMaximumSize(
+                _sc(mx.width()) if mx.width() < _QWIDGETSIZE_MAX else _QWIDGETSIZE_MAX,
+                _sc(mx.height()) if mx.height() < _QWIDGETSIZE_MAX else _QWIDGETSIZE_MAX)
+        if w is win:
+            continue
+        parent = w.parentWidget()
+        if parent is not None and parent.layout() is not None:
+            continue                      # position is managed by a layout
+        r = w.geometry()
+        w.setGeometry(QRect(_sc(r.x()), _sc(r.y()), _sc(r.width()), _sc(r.height())))
+    win.resize(_sc(win.width()), _sc(win.height()))
+
+
+def loadUi(uifile, baseinstance=None, package=''):
+    """loadUi + automatic font/geometry rescaling for the running screen."""
+    widget = _loadUi(uifile, baseinstance, package)
+    target = baseinstance if baseinstance is not None else widget
+    scale_fonts(target)
+    if isinstance(target, QDialog):
+        scale_geometry(target)
+    return target
 
 
 class YDL(YoutubeDL):
@@ -464,14 +593,16 @@ class StandardItemModel(QStandardItemModel):
 class StandardItem(QStandardItem):
     """Define the standard items entry for the QTreeView and QListView in our program"""
 
-    def __init__(self, txt='', info=None, font_size=9, set_bold=False, color=QColor(0, 0, 0)):
+    def __init__(self, txt='', info=None, font_size=9, set_bold=False, color=None):
         super().__init__()
 
-        font = QFont('Arial', font_size)
+        font = QFont('Arial')
+        font.setPointSizeF(font_size * ui_scale())
         font.setBold(set_bold)
 
         self.setEditable(False)
-        self.setForeground(color)
+        if color is not None:
+            self.setForeground(color)
         self.setFont(font)
         self.setText(txt)
         self.info = info

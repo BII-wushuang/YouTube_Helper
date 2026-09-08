@@ -428,30 +428,27 @@ class DownloadTab(QWidget):
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="">
-        <meta name="author" content="">
         <style>
-        h1 {
-            text-align: center;
-        }
-        figure {
+        body {{
+            background: #ffffff;
+            color: #111111;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: {fs}px;
+        }}
+        h1 {{ text-align: center; }}
+        figure {{
             display: inline-block;
             border: thin silver solid;
-            width: 600px;
-            height: 400px;
-        }
-        figcaption {
-            text-align: center;
-        }
-        img {
-            width: 600px; 
-            float: left; 
-        }
+            width: {w}px;
+            height: {h}px;
+        }}
+        figcaption {{ text-align: center; }}
+        img {{ width: {w}px; float: left; }}
         </style>
         </head>
 
         <body>
-        """
+        """.format(fs=round(15 * ui_scale()), w=round(600 * ui_scale()), h=round(400 * ui_scale()))
 
         footer = """
         </body>

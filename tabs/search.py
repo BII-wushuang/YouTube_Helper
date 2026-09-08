@@ -66,38 +66,40 @@ class SearchTab(QWidget):
         self.main_window.tab_manager.setCurrentIndex(0)
 
     def show_html(self, html):
+        fs = round(15 * ui_scale())
         header = """
             <!DOCTYPE html>
             <html>
             <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta name="description" content="">
-            <meta name="author" content="">
 
             <style>
-            h1 {
-                text-align: center;
-            }
-            figure {
+            body {{
+                background: #ffffff;
+                color: #111111;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: {fs}px;
+            }}
+            a {{ color: #245edc; }}
+            h1 {{ text-align: center; }}
+            figure {{
                 display: inline-block;
                 border: thin silver solid;
-                width: 280px;
-            }
-            figcaption {
-                text-align: center;
-            }
-            img {
-                width: 240px; 
-                margin: 10px; 
-                float: left; 
+                width: {fig}px;
+            }}
+            figcaption {{ text-align: center; }}
+            img {{
+                width: {img}px;
+                margin: 10px;
+                float: left;
                 border: 10px solid black;
-            }
+            }}
             </style>
             </head>
 
             <body>
-            """
+            """.format(fs=fs, fig=round(280 * ui_scale()), img=round(240 * ui_scale()))
 
         footer = """
             </body>
